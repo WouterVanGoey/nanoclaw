@@ -196,8 +196,21 @@ function findAllowedRoot(
   return null;
 }
 
+// Paths that must not be shadowed by additional mounts
+const PROTECTED_CONTAINER_PATHS = [
+  '/workspace/group',
+  '/workspace/project',
+  '/workspace/ipc',
+  '/workspace/global',
+  '/home/node/.claude',
+  '/app/src',
+];
+
 /**
- * Validate the container path to prevent escaping /workspace/extra/
+ * Validate the container path.
+ * Relative paths are mounted under /workspace/extra/.
+ * Absolute paths starting with /workspace/ are used as-is, but may not
+ * shadow protected paths.
  */
 function isValidContainerPath(containerPath: string): boolean {
   // Must not contain .. to prevent path traversal
@@ -205,14 +218,26 @@ function isValidContainerPath(containerPath: string): boolean {
     return false;
   }
 
-  // Must not be absolute (it will be prefixed with /workspace/extra/)
-  if (containerPath.startsWith('/')) {
-    return false;
-  }
-
   // Must not be empty
   if (!containerPath || containerPath.trim() === '') {
     return false;
+  }
+
+  if (containerPath.startsWith('/')) {
+    // Absolute paths must be under /workspace/
+    if (!containerPath.startsWith('/workspace/')) {
+      return false;
+    }
+    // Must not shadow protected paths
+    for (const protected_ of PROTECTED_CONTAINER_PATHS) {
+      if (
+        containerPath === protected_ ||
+        containerPath.startsWith(protected_ + '/')
+      ) {
+        return false;
+      }
+    }
+    return true;
   }
 
   return true;
@@ -352,9 +377,13 @@ export function validateAdditionalMounts(
     const result = validateMount(mount, isMain);
 
     if (result.allowed) {
+      const resolvedPath = result.resolvedContainerPath!;
+      const finalContainerPath = resolvedPath.startsWith('/')
+        ? resolvedPath
+        : `/workspace/extra/${resolvedPath}`;
       validatedMounts.push({
         hostPath: result.realHostPath!,
-        containerPath: `/workspace/extra/${result.resolvedContainerPath}`,
+        containerPath: finalContainerPath,
         readonly: result.effectiveReadonly!,
       });
 

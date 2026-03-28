@@ -9,14 +9,12 @@ store/
 data/
 logs/
 
-# Groups - only track base structure and specific CLAUDE.md files
+# Groups - track folder structure only, not personal system prompts
 groups/*
 !groups/main/
 !groups/global/
 groups/main/*
 groups/global/*
-!groups/main/CLAUDE.md
-!groups/global/CLAUDE.md
 
 # Secrets
 *.keys.json
@@ -36,3 +34,10 @@ groups/global/*
 .nanoclaw/
 
 agents-sdk-docs
+
+# Personal session notes
+docs/SESSION-*.md
+
+# Computer bridge (work in progress, not ready)
+src/computer-bridge.ts
+container/skills/computer-control/
